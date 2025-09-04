@@ -66,3 +66,74 @@ confluence-md-exporter/
 ## ライセンス
 
 MIT License
+
+---
+
+# Confluence → Markdown Exporter
+
+A Chrome/Microsoft Edge extension that allows you to export Confluence page content to Markdown format with just one click.
+
+## Features
+
+- Download the current page as a Markdown file with a single click on the toolbar icon
+- Automatic file naming using Confluence page title and page ID
+- Convert HTML elements to Markdown syntax (headings, lists, code blocks, images, etc.)
+- Compatible with Chrome Manifest V3
+
+## Installation
+
+1. Clone or download this repository
+2. Open `chrome://extensions` for Chrome or `edge://extensions/` for Edge
+3. Enable "Developer mode"
+4. Click "Load unpacked extension"
+5. Select the downloaded folder (confluence-md-exporter)
+
+## Usage
+
+1. Open a Confluence page
+2. Click the extension icon in the browser toolbar
+3. The Markdown file will be automatically downloaded
+
+## File Structure
+
+```
+confluence-md-exporter/
+├── manifest.json      # Chrome extension configuration file
+├── background.js      # Service worker (main processing)
+├── content.js         # Content script (executes on page)
+├── turndown.js        # HTML→Markdown conversion library
+├── icon.png          # Extension icon
+└── README.md         # This file
+```
+
+## Development
+
+### Reload
+
+After making code changes:
+
+1. Click the "Reload" button for the extension in `chrome://extensions`
+2. Click the icon on any page to verify functionality
+
+### Testing
+
+Currently validated through manual testing:
+
+- Click the icon on Confluence pages and verify `.md` file is downloaded
+- Verify filename is page title + page ID (if exists)
+- Verify headings, lists, code blocks, and images are properly converted
+- Check `[Exporter]` logs and errors in DevTools console
+
+## Technical Specifications
+
+- **Manifest Version**: 3
+- **Language**: JavaScript (ES2020+)
+- **Required Permissions**:
+  - `scripting`: Content script injection
+  - `downloads`: File downloads
+  - `activeTab`: Access to active tab
+- **Supported URLs**: All HTTP/HTTPS sites (`*://*/*`)
+
+## License
+
+MIT License
