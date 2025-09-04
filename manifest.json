@@ -1,16 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Confluence → Markdown Exporter (Icon-click)",
-  "version": "1.0.5",
+  "version": "1.0.0",
   "description": "アイコンクリックでConfluence本文をMarkdown保存。Service WorkerはDataURLを使用してDL。",
-  "permissions": [
-    "scripting",
-    "downloads",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "*://*/*"
-  ],
+  "permissions": ["scripting", "downloads", "activeTab"],
+  "host_permissions": ["*://*/*"],
   "background": {
     "service_worker": "background.js"
   },
