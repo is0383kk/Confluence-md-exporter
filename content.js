@@ -108,6 +108,52 @@
       return "```" + fenceInfo + "\n" + text + "\n```\n\n";
     },
   });
+  turndownService.addRule("confluenceTable", {
+    filter: function (node) {
+      return (
+        node && node.nodeType === 1 && node.tagName.toLowerCase() === "table"
+      );
+    },
+    replacement: function (_content, node) {
+      // sticky/floating ヘッダー等、非表示の複製要素を判定
+      const isHidden = (el) => {
+        if (!el || el.nodeType !== 1) return false;
+        const style = el.getAttribute("style") || "";
+        if (/display\s*:\s*none/i.test(style)) return true;
+        if (el.classList && el.classList.contains("tableFloatingHeader")) {
+          return true;
+        }
+        return false;
+      };
+      const cellText = (cell) =>
+        (cell.textContent || "").replace(/\s+/g, " ").trim();
+      const rowCells = (tr) =>
+        Array.from(tr.querySelectorAll("th,td")).map(cellText);
+      // 表示されている thead を見出しとして採用（複製 thead は除外）
+      const headThead = Array.from(node.querySelectorAll("thead")).filter(
+        (t) => !isHidden(t)
+      )[0];
+      // 本文行: thead 配下の行と非表示行を除外
+      const bodyRows = Array.from(node.querySelectorAll("tr")).filter((tr) => {
+        if (tr.closest("thead")) return false;
+        if (isHidden(tr) || isHidden(tr.parentElement)) return false;
+        return true;
+      });
+      // thead が無い場合は先頭の本文行を見出しに転用
+      const headerRow = headThead
+        ? headThead.querySelector("tr")
+        : bodyRows.shift();
+      if (!headerRow) return "";
+      const header = rowCells(headerRow);
+      if (!header.length) return "";
+      let out = "| " + header.join(" | ") + " |\n";
+      out += "|" + header.map(() => "---").join("|") + "|\n";
+      bodyRows.forEach((tr) => {
+        out += "| " + rowCells(tr).join(" | ") + " |\n";
+      });
+      return out + "\n\n";
+    },
+  });
   const md = turndownService.turndown(el.innerHTML);
   if (!md || !md.trim()) {
     alert("Markdown変換結果が空でした。本文セレクタを見直してください。");
