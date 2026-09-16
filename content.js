@@ -125,8 +125,51 @@
         }
         return false;
       };
-      const cellText = (cell) =>
-        (cell.textContent || "").replace(/\s+/g, " ").trim();
+      // セル内で改行として扱うブロック要素
+      const blockTags = new Set([
+        "p",
+        "div",
+        "li",
+        "ul",
+        "ol",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "blockquote",
+        "pre",
+        "table",
+        "tr",
+      ]);
+      // ブロック境界と <br> を改行(\n)に変換しつつテキストを抽出
+      const extractText = (n) => {
+        let s = "";
+        n.childNodes.forEach((c) => {
+          if (c.nodeType === 3) {
+            s += c.nodeValue;
+          } else if (c.nodeType === 1) {
+            const tag = c.tagName.toLowerCase();
+            if (tag === "br") {
+              s += "\n";
+            } else if (blockTags.has(tag)) {
+              s += "\n" + extractText(c) + "\n";
+            } else {
+              s += extractText(c);
+            }
+          }
+        });
+        return s;
+      };
+      // セル内改行は Markdown テーブルで表現できる <br> に、| はエスケープ
+      const cellText = (cell) => {
+        const lines = extractText(cell)
+          .split("\n")
+          .map((l) => l.replace(/\s+/g, " ").trim())
+          .filter((l) => l.length > 0);
+        return lines.join("<br>").replace(/\|/g, "\\|");
+      };
       const rowCells = (tr) =>
         Array.from(tr.querySelectorAll("th,td")).map(cellText);
       // 表示されている thead を見出しとして採用（複製 thead は除外）
