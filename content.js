@@ -1,4 +1,4 @@
-/* content.js v1.0.6 */
+/* content.js v1.0.8 */
 (() => {
   console.log("[Exporter] content.js injected on", location.href);
   const selectors = [
@@ -197,11 +197,59 @@
       return out + "\n\n";
     },
   });
+  turndownService.addRule("drawioMacro", {
+    filter: function (node) {
+      return (
+        node &&
+        node.nodeType === 1 &&
+        node.classList &&
+        node.classList.contains("drawio-macro")
+      );
+    },
+    replacement: function (_content, node) {
+      const svg = node.querySelector("svg");
+      if (!svg) return "";
+      const clone = svg.cloneNode(true);
+      // 親マクロ／SVG から図のサイズを求め、単体表示用に viewBox とサイズを補正する
+      const px = (v) => {
+        const n = parseFloat(v || "");
+        return Number.isFinite(n) ? n : 0;
+      };
+      const w =
+        px(svg.style.minWidth) ||
+        px(node.style.width) ||
+        px(svg.getAttribute("width"));
+      const h =
+        px(svg.style.minHeight) ||
+        px(node.style.height) ||
+        px(svg.getAttribute("height"));
+      if (!clone.getAttribute("viewBox") && w && h) {
+        clone.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      }
+      if (w) clone.setAttribute("width", String(w));
+      if (h) clone.setAttribute("height", String(h));
+      // width:100% などレンダラ依存の inline style を除去（サイズは属性で指定済み）
+      clone.removeAttribute("style");
+      const xml = new XMLSerializer().serializeToString(clone);
+      return "\n\n" + xml + "\n\n";
+    },
+  });
   // 変換前に Confluence のコードブロック周りの UI コントロールを除去する
   const clone = el.cloneNode(true);
   clone
     .querySelectorAll(".codeHeader, .expand-control, button, span[hidden]")
     .forEach((n) => n.remove());
+  // draw.io 図を囲む強調要素(strong/b/em/i)をアンラップする
+  // （図はブロック要素で、** などで囲むと Markdown が壊れるため）
+  clone.querySelectorAll(".drawio-macro").forEach((macro) => {
+    let p = macro.parentElement;
+    while (p && p !== clone && /^(strong|b|em|i)$/i.test(p.tagName)) {
+      const parent = p.parentNode;
+      while (p.firstChild) parent.insertBefore(p.firstChild, p);
+      parent.removeChild(p);
+      p = macro.parentElement;
+    }
+  });
   const md = turndownService.turndown(clone.innerHTML);
   if (!md || !md.trim()) {
     alert("Markdown変換結果が空でした。本文セレクタを見直してください。");
