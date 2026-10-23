@@ -1,4 +1,4 @@
-/* content.js v1.0.5 */
+/* content.js v1.0.6 */
 (() => {
   console.log("[Exporter] content.js injected on", location.href);
   const selectors = [
@@ -197,7 +197,12 @@
       return out + "\n\n";
     },
   });
-  const md = turndownService.turndown(el.innerHTML);
+  // 変換前に Confluence のコードブロック周りの UI コントロールを除去する
+  const clone = el.cloneNode(true);
+  clone
+    .querySelectorAll(".codeHeader, .expand-control, button, span[hidden]")
+    .forEach((n) => n.remove());
+  const md = turndownService.turndown(clone.innerHTML);
   if (!md || !md.trim()) {
     alert("Markdown変換結果が空でした。本文セレクタを見直してください。");
     return;
