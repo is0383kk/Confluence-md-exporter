@@ -26,7 +26,16 @@ Confluence ページの本文をワンクリックで Markdown 形式にエク�
 2. **content.js**（ページ側で実行）
    - `selectors` 配列で Confluence 系の本文要素（`.ak-renderer-document`, `.wiki-content`, `#main-content` 等）を優先順に探索。見つからなければトップフレームの iframe 内を走査し、最終フォールバックは `<body>`。
    - ファイル名は `document.title` + URL の `pageId` クエリから生成し、ファイル名に使えない文字をサニタイズする。
-   - `TurndownService` を設定し、カスタムルール（`preserveBr` / `imageWithAlt` で画像 src を絶対 URL 化 / `confluencePrismCodeBlock` で Atlassian のコードブロックを言語付きフェンスに変換）を追加して変換。結果を `chrome.runtime.sendMessage({ action: "downloadMd" })` で background に送る。
+   - `TurndownService` を設定し、カスタムルールを追加して変換。結果を `chrome.runtime.sendMessage({ action: "downloadMd" })` で background に送る。カスタムルールは以下の 5 つ:
+     - `preserveBr`: `<br>` を Markdown の改行（半角スペース 2 つ + 改行）に変換。
+     - `imageWithAlt`: 画像 src を `location.origin` 基準で絶対 URL 化。
+     - `confluencePrismCodeBlock`: Atlassian/DS のコードブロック（`span[data-ds--code--code-block]` / `code[style*="white-space: pre"]`）を、`class="language-xxx"` や `data-code-lang` から言語推定した言語付きフェンスに変換。
+     - `confluenceTable`: `<table>` を Markdown テーブルに変換。sticky/floating な複製ヘッダー（`display:none` や `.tableFloatingHeader`）を除外し、セル内のブロック要素・`<br>` を `<br>` 区切りに、`|` をエスケープする。`thead` が無い場合は先頭行を見出しに転用。
+     - `drawioMacro`: `.drawio-macro`（draw.io マクロ）内のインライン `<svg>` をそのまま Markdown に埋め込む。元 SVG は `viewBox` を持たず CSS でサイズ指定されるため、親マクロ／SVG の `min-width`/`min-height`・`width`/`height` から `viewBox` と `width`/`height` を補正し、`width:100%` 等の inline style を除去する。**この方式ではインライン SVG なので、GitHub など SVG をサニタイズするビューアでは図が表示されない**（VS Code プレビューやブラウザでは表示される）。SVG 内の文字は `<foreignObject>` 内の HTML で、同じ理由で data URL 画像化すると消えやすいため、インライン埋め込みを採用している。
+
+   変換は `el.innerHTML` を直接渡すのではなく、**`cloneNode(true)` したコピーに対して掃除を施してから `turndown()` に渡す**（ページ側 DOM を壊さないため）。掃除の内容は 2 つ:
+   - **UI コントロール除去**: `.codeHeader, .expand-control, button, span[hidden]` を削除。コードブロックのタイトル・「ソースを展開」・ツールバーボタン（「折り返しをオン」「テキストとしてコピー」等。クラス名が動的ハッシュのため要素名 `button` で除去）・ツールチップの複製 `span[hidden]` が本文に混入するのを防ぐ。
+   - **draw.io 図を囲む強調のアンラップ**: `.drawio-macro` の祖先をたどり `strong`/`b`/`em`/`i` をアンラップする。図（ブロック）が強調（インライン）で囲まれると `**` が図の前後に浮いて Markdown が壊れるため。
 
 3. **turndown.js**: 同梱の Turndown ライブラリ。グローバル `TurndownService` として読み込まれる（改変しない前提のベンダーファイル）。
 
